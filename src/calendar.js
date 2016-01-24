@@ -9,9 +9,6 @@ function monthName(month){
   return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'][month];
 }
 
-function isPayday(dateObj){
-  return paydays.filter(v => v.month === dateObj.month + 1 && v.day === dateObj.day + 1).length > 0;
-}
 
 function addMonth(date, num){
   var nextMonth = new Date(date);
@@ -39,6 +36,7 @@ export class Calendar extends Component {
       startAmount: 10,
       incAmount: 5,
       dayLength: 8,
+      isPayday: isPayday,
       checked: [],
       currDate: new Date(),
       cache: {}
@@ -57,6 +55,9 @@ export class Calendar extends Component {
       return false;
     }
     if (d < this.state.startDate){
+      return false;
+    }
+    if (isHoliday(dateObj)){
       return false;
     }
 
@@ -98,7 +99,7 @@ export class Calendar extends Component {
       hours = this.getHours(oneDayLessObj, (i || 0) + 1);
     }
     var todayMod = 0;
-    if (isPayday(dateObj)){
+    if (this.state.isPayday(dateObj)){
       todayMod = this.state.incAmount;
     }
     if (this.isChecked(dateObj)){
@@ -166,6 +167,14 @@ class Controller extends Component {
           type='text'
           value={this.props.cal.state.startAmount}
           onChange={e => this.props.cal.setState({startAmount:parseInt(e.target.value)||0})} />
+        <br />
+        Increment Amount:
+        <input
+          style={{marginLeft:10}}
+          type='text'
+          value={this.props.cal.state.incAmount}
+          onChange={e => this.props.cal.setState({incAmount:parseInt(e.target.value)||0})} />
+
         </div>
       </center>
     );
@@ -181,18 +190,7 @@ class Month extends Component {
       <div style={{width:450, display:'inline-block',textAlign:'left',verticalAlign:'top'}}>
         <div style={{textAlign:'center'}}>{monthName(this.props.month) + " " + this.props.year}</div>
         {[...Array(daysInMonth(this.props.year, this.props.month) + padding)].map((v,i) =>
-          i < padding
-          ? (<Day
-              fake={true}
-              key={"fake"+i}
-              checked={cal.isChecked({day:i-padding,month:this.props.month,year:this.props.year})}
-              //day={}
-              month={this.props.month}
-              year={this.props.year}
-              check={cal.check}
-              getHours={cal.getHours}
-              isCheckable={cal.isCheckable}/>)
-          : (<Day
+          (<Day
               fake={false}
               checked={cal.isChecked({day:i-padding,month:this.props.month,year:this.props.year})}
               day={i-padding}
@@ -201,7 +199,8 @@ class Month extends Component {
               check={cal.check}
               getHours={cal.getHours}
               isCheckable={cal.isCheckable}
-              key={this.props.year+"/"+this.props.month+"/"+(i-padding)}/>))}
+              key={this.props.year+"/"+this.props.month+"/"+(i-padding)}/>))
+          }
       </div>
     );
   }
@@ -214,7 +213,7 @@ class Day extends Component {
   }
 
   getBackgroundColor(dateObj){
-    if (this.props.fake) {
+    if (this.props.day < 0) {
       return "#222";
     }
     if (isPayday(dateObj)) {
@@ -229,6 +228,7 @@ class Day extends Component {
   }
 
   render() {
+    var fake = this.props.day < 0;
     var dateObj = {day:this.props.day, month:this.props.month, year:this.props.year};
     return (
       <div style={{
@@ -237,12 +237,12 @@ class Day extends Component {
         backgroundColor:this.getBackgroundColor(dateObj),
         display:'inline-block',
         border:'1px solid grey',
-        margin:this.props.fake? '2px 2px -9px 2px' : '2px 2px 2px 2px',
+        margin:fake? '2px 2px -9px 2px' : '2px 2px 2px 2px',
         paddingLeft:2,
-        cursor:this.props.fake || !this.props.isCheckable(dateObj) ? 'arrow':'pointer',
+        cursor:fake || !this.props.isCheckable(dateObj) ? 'deafautl' : 'pointer',
       }}
         onClick={() => this.props.check(dateObj)}>
-        {!this.props.fake ? [(<div style={{
+        {!fake && (<div><div style={{
           marginTop:5,
           marginRight:'auto',
           color:'white',
@@ -253,43 +253,63 @@ class Day extends Component {
           border:'1px solid white'
           }}>
             {this.props.day + 1}
-        </div>),
-        (<div style={{
+        </div>
+        <div style={{
           textAlign:'right',
           marginRight:5,
           marginTop:5,
         }}>
           {this.props.getHours(dateObj)}
-        </div>)] : ""}
+        </div>
+      </div>)}
       </div>
     );
   }
 }
 
 
-var paydays = [
-  {month: 1, day: 15},
-  {month: 1, day: 31},
-  {month: 2, day: 15},
-  {month: 2, day: 28},
-  {month: 3, day: 15},
-  {month: 3, day: 31},
-  {month: 4, day: 15},
-  {month: 4, day: 30},
-  {month: 5, day: 15},
-  {month: 5, day: 31},
-  {month: 6, day: 15},
-  {month: 6, day: 30},
-  {month: 7, day: 15},
-  {month: 7, day: 31},
-  {month: 8, day: 15},
-  {month: 8, day: 31},
-  {month: 9, day: 15},
-  {month: 9, day: 30},
-  {month: 10, day: 15},
-  {month: 10, day: 31},
-  {month: 11, day: 15},
-  {month: 11, day: 30},
-  {month: 12, day: 15},
-  {month: 12, day: 31}
-];
+function isPayday(dateObj){
+  var paydays = [
+    {month: 1, day: 15},
+    {month: 1, day: 31},
+    {month: 2, day: 15},
+    {month: 2, day: 28},
+    {month: 3, day: 15},
+    {month: 3, day: 31},
+    {month: 4, day: 15},
+    {month: 4, day: 30},
+    {month: 5, day: 15},
+    {month: 5, day: 31},
+    {month: 6, day: 15},
+    {month: 6, day: 30},
+    {month: 7, day: 15},
+    {month: 7, day: 31},
+    {month: 8, day: 15},
+    {month: 8, day: 31},
+    {month: 9, day: 15},
+    {month: 9, day: 30},
+    {month: 10, day: 15},
+    {month: 10, day: 31},
+    {month: 11, day: 15},
+    {month: 11, day: 30},
+    {month: 12, day: 15},
+    {month: 12, day: 31}
+  ];
+  return paydays.filter(v => v.month === dateObj.month + 1 && v.day === dateObj.day + 1).length > 0;
+}
+
+function isHoliday(dateObj){
+  var holidays = [
+    {month: 1, day: 1, event: 'New Year’s Day'},
+    {month: 1, day: 18, event: 'Birthday of Martin Luther King, Jr.'},
+    {month: 2, day: 15, event: 'Washington’s Birthday'},
+    {month: 5, day: 30, event: 'Memorial Day'},
+    {month: 7, day: 4, event: 'Independence Day'},
+    {month: 9, day: 5, event: 'Labor Day'},
+    {month: 10, day: 10, event: 'Columbus Day'},
+    {month: 11, day: 11, event: 'Veterans Day'},
+    {month: 11, day: 24, event: 'Thanksgiving Day'},
+    {month: 12, day: 26, event: 'Christmas Day'}
+  ];
+  return holidays.filter(v => v.month === dateObj.month + 1 && v.day === dateObj.day + 1).length > 0;
+}
