@@ -31,16 +31,22 @@ function dateObjToString(d){
 export class Calendar extends Component {
   constructor(props){
     super(props);
-    this.state = {
-      startDate: new Date(),
-      startAmount: 10,
-      incAmount: 5,
-      dayLength: 8,
-      isPayday: isPayday,
-      checked: [],
-      currDate: new Date(),
-      cache: {}
-    };
+    const savedState = localStorage.getItem(window.location.href);
+    if (savedState) {
+      this.state = JSON.parse(savedState);
+      this.state.currDate = new Date(this.state.currDate);
+      this.state.startDate = new Date(this.state.startDate);
+    } else {
+      this.state = {
+        startDate: new Date(),
+        startAmount: 10,
+        incAmount: 5,
+        dayLength: 8,
+        checked: [],
+        currDate: new Date(),
+        cache: {}
+      };
+    }
     this.getHours = this.getHours.bind(this);
     this.check = this.check.bind(this);
     this.isChecked = this.isChecked.bind(this);
@@ -77,6 +83,10 @@ export class Calendar extends Component {
     this.c = {};
   }
 
+  componentDidUpdate() {
+    localStorage.setItem(window.location.href, JSON.stringify(this.state));
+  }
+
   getHours(dateObj, i){
     var key = dateObjToString(dateObj);
     if (this.cache(key)){
@@ -99,7 +109,7 @@ export class Calendar extends Component {
       hours = this.getHours(oneDayLessObj, (i || 0) + 1);
     }
     var todayMod = 0;
-    if (this.state.isPayday(dateObj)){
+    if (isPayday(dateObj)){
       todayMod = this.state.incAmount;
     }
     if (this.isChecked(dateObj)){
